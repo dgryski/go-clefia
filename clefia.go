@@ -155,7 +155,7 @@ func ClefiaF1Xor(dst []byte, src []byte, rk []byte) {
 func ClefiaGfn4(y []byte, x []byte, rk []byte, r int) {
 	var fin, fout [16]byte
 
-	ByteCpy(fin[:], x[:], 16)
+	ByteCpy(fin[:], x, 16)
 	for ; r > 0; r-- {
 		ClefiaF0Xor(fout[0:], fin[0:], rk[0:])
 		ClefiaF1Xor(fout[8:], fin[8:], rk[4:])
@@ -296,25 +296,25 @@ func ClefiaKeySet192(rk []byte, skey []byte) {
 	/* GFN_{8,10} (generating L from K) */
 	ClefiaGfn8(lk[:], skey256[:], con192[:], 10)
 
-	ByteXor(rk[:], skey256[:], skey256[16:], 8) /* initial whitening key (WK0, WK1) */
+	ByteXor(rk, skey256[:], skey256[16:], 8) /* initial whitening key (WK0, WK1) */
 	rk = rk[8:]
 	for i := 0; i < 11; i++ { /* round key (RKi (0 <= i < 44)) */
 		if ((i / 2) % 2) != 0 {
-			ByteXor(rk[:], lk[16:], con192[i*16+(4*40):], 16) /* LR */
+			ByteXor(rk, lk[16:], con192[i*16+(4*40):], 16) /* LR */
 			if i%2 != 0 {
-				ByteXor(rk[:], rk[:], skey256[0:], 16) /* Xoring KL */
+				ByteXor(rk, rk, skey256[0:], 16) /* Xoring KL */
 			}
 			ClefiaDoubleSwap(lk[16:]) /* updating LR */
 		} else {
-			ByteXor(rk[:], lk[0:], con192[i*16+(4*40):], 16) /* LL */
+			ByteXor(rk, lk[0:], con192[i*16+(4*40):], 16) /* LL */
 			if i%2 != 0 {
-				ByteXor(rk[:], rk[:], skey256[16:], 16) /* Xoring KR */
+				ByteXor(rk, rk, skey256[16:], 16) /* Xoring KR */
 			}
 			ClefiaDoubleSwap(lk[0:]) /* updating LL */
 		}
 		rk = rk[16:]
 	}
-	ByteXor(rk[:], skey256[8:], skey256[24:], 8) /* final whitening key (WK2, WK3) */
+	ByteXor(rk, skey256[8:], skey256[24:], 8) /* final whitening key (WK2, WK3) */
 }
 
 func ClefiaKeySet256(rk []byte, skey []byte) {
@@ -326,9 +326,9 @@ func ClefiaKeySet256(rk []byte, skey []byte) {
 	/* generating CONi^(256) (0 <= i < 92, lk = 46) */
 	ClefiaConSet(con256[:], iv, 46)
 	/* GFN_{8,10} (generating L from K) */
-	ClefiaGfn8(lk[:], skey[:], con256[:], 10)
+	ClefiaGfn8(lk[:], skey, con256[:], 10)
 
-	ByteXor(rk[:], skey[:], skey[16:], 8) /* initial whitening key (WK0, WK1) */
+	ByteXor(rk, skey, skey[16:], 8) /* initial whitening key (WK0, WK1) */
 	rk = rk[8:]
 	for i := 0; i < 13; i++ { /* round key (RKi (0 <= i < 52)) */
 		if ((i / 2) % 2) != 0 {
