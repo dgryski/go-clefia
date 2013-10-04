@@ -37,9 +37,9 @@ func TestClefia(t *testing.T) {
 	for _, tst := range tests {
 
 		var cl clefiaCipher
-		r := ClefiaKeySet(cl.rk[:], tst.key, len(tst.key)*8)
+		r := clefiaKeySet(cl.rk[:], tst.key, len(tst.key)*8)
 		var ct [16]byte
-		ClefiaEncrypt(ct[:], tst.plain[:], cl.rk[:], r)
+		clefiaEncrypt(ct[:], tst.plain[:], cl.rk[:], r)
 
 		if !bytes.Equal(ct[:], tst.cipher) {
 			t.Errorf("encrypt failed:\ngot : % 02x\nwant: % 02x", ct[:], tst.cipher)
@@ -47,7 +47,7 @@ func TestClefia(t *testing.T) {
 
 		var p [16]byte
 
-		ClefiaDecrypt(p[:], ct[:], cl.rk[:], r)
+		clefiaDecrypt(p[:], ct[:], cl.rk[:], r)
 
 		if !bytes.Equal(p[:], tst.plain) {
 			t.Errorf("decrypt failed:\ngot : % 02x\nwant: % 02x", p[:], tst.plain)

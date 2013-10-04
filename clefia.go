@@ -80,19 +80,19 @@ var clefia_s1 = [256]byte{
 	0x6b, 0x03, 0xe1, 0x2e, 0x7d, 0x14, 0x95, 0x1d,
 }
 
-func ByteCpy(dst, src []byte, bytelen int) {
+func byteCpy(dst, src []byte, bytelen int) {
 	for i := 0; i < bytelen; i++ {
 		dst[i] = src[i]
 	}
 }
 
-func ByteXor(dst, a, b []byte, bytelen int) {
+func byteXor(dst, a, b []byte, bytelen int) {
 	for i := 0; i < bytelen; i++ {
 		dst[i] = a[i] ^ b[i]
 	}
 }
 
-func ClefiaMul2(x byte) byte {
+func clefiaMul2(x byte) byte {
 	/* multiplication over GF(2^8) (p(x) = '11d') */
 	if x&0x80 != 0 {
 		x ^= 0x0e
@@ -100,110 +100,110 @@ func ClefiaMul2(x byte) byte {
 	return ((x << 1) | (x >> 7))
 }
 
-func ClefiaMul4(x byte) byte {
-	return (ClefiaMul2(ClefiaMul2((x))))
+func clefiaMul4(x byte) byte {
+	return (clefiaMul2(clefiaMul2((x))))
 }
 
-func ClefiaMul6(x byte) byte { return (ClefiaMul2((x)) ^ ClefiaMul4((x))) }
-func ClefiaMul8(x byte) byte { return (ClefiaMul2(ClefiaMul4((x)))) }
-func ClefiaMulA(x byte) byte { return (ClefiaMul2((x)) ^ ClefiaMul8((x))) }
+func clefiaMul6(x byte) byte { return (clefiaMul2((x)) ^ clefiaMul4((x))) }
+func clefiaMul8(x byte) byte { return (clefiaMul2(clefiaMul4((x)))) }
+func clefiaMulA(x byte) byte { return (clefiaMul2((x)) ^ clefiaMul8((x))) }
 
-func ClefiaF0Xor(dst []byte, src []byte, rk []byte) {
+func clefiaF0Xor(dst []byte, src []byte, rk []byte) {
 	var x, y, z [4]byte
 
 	/* F0 */
 	/* Key addition */
-	ByteXor(x[:], src, rk, 4)
+	byteXor(x[:], src, rk, 4)
 	/* Substitution layer */
 	z[0] = clefia_s0[x[0]]
 	z[1] = clefia_s1[x[1]]
 	z[2] = clefia_s0[x[2]]
 	z[3] = clefia_s1[x[3]]
 	/* Diffusion layer (M0) */
-	y[0] = z[0] ^ ClefiaMul2(z[1]) ^ ClefiaMul4(z[2]) ^ ClefiaMul6(z[3])
-	y[1] = ClefiaMul2(z[0]) ^ z[1] ^ ClefiaMul6(z[2]) ^ ClefiaMul4(z[3])
-	y[2] = ClefiaMul4(z[0]) ^ ClefiaMul6(z[1]) ^ z[2] ^ ClefiaMul2(z[3])
-	y[3] = ClefiaMul6(z[0]) ^ ClefiaMul4(z[1]) ^ ClefiaMul2(z[2]) ^ z[3]
+	y[0] = z[0] ^ clefiaMul2(z[1]) ^ clefiaMul4(z[2]) ^ clefiaMul6(z[3])
+	y[1] = clefiaMul2(z[0]) ^ z[1] ^ clefiaMul6(z[2]) ^ clefiaMul4(z[3])
+	y[2] = clefiaMul4(z[0]) ^ clefiaMul6(z[1]) ^ z[2] ^ clefiaMul2(z[3])
+	y[3] = clefiaMul6(z[0]) ^ clefiaMul4(z[1]) ^ clefiaMul2(z[2]) ^ z[3]
 
 	/* Xoring after F0 */
-	ByteCpy(dst[0:], src[0:], 4)
-	ByteXor(dst[4:], src[4:], y[:], 4)
+	byteCpy(dst[0:], src[0:], 4)
+	byteXor(dst[4:], src[4:], y[:], 4)
 }
 
-func ClefiaF1Xor(dst []byte, src []byte, rk []byte) {
+func clefiaF1Xor(dst []byte, src []byte, rk []byte) {
 	var x, y, z [4]byte
 
 	/* F1 */
 	/* Key addition */
-	ByteXor(x[:], src, rk, 4)
+	byteXor(x[:], src, rk, 4)
 	/* Substitution layer */
 	z[0] = clefia_s1[x[0]]
 	z[1] = clefia_s0[x[1]]
 	z[2] = clefia_s1[x[2]]
 	z[3] = clefia_s0[x[3]]
 	/* Diffusion layer (M1) */
-	y[0] = z[0] ^ ClefiaMul8(z[1]) ^ ClefiaMul2(z[2]) ^ ClefiaMulA(z[3])
-	y[1] = ClefiaMul8(z[0]) ^ z[1] ^ ClefiaMulA(z[2]) ^ ClefiaMul2(z[3])
-	y[2] = ClefiaMul2(z[0]) ^ ClefiaMulA(z[1]) ^ z[2] ^ ClefiaMul8(z[3])
-	y[3] = ClefiaMulA(z[0]) ^ ClefiaMul2(z[1]) ^ ClefiaMul8(z[2]) ^ z[3]
+	y[0] = z[0] ^ clefiaMul8(z[1]) ^ clefiaMul2(z[2]) ^ clefiaMulA(z[3])
+	y[1] = clefiaMul8(z[0]) ^ z[1] ^ clefiaMulA(z[2]) ^ clefiaMul2(z[3])
+	y[2] = clefiaMul2(z[0]) ^ clefiaMulA(z[1]) ^ z[2] ^ clefiaMul8(z[3])
+	y[3] = clefiaMulA(z[0]) ^ clefiaMul2(z[1]) ^ clefiaMul8(z[2]) ^ z[3]
 
 	/* Xoring after F1 */
-	ByteCpy(dst[0:], src[0:], 4)
-	ByteXor(dst[4:], src[4:], y[:], 4)
+	byteCpy(dst[0:], src[0:], 4)
+	byteXor(dst[4:], src[4:], y[:], 4)
 }
 
-func ClefiaGfn4(y []byte, x []byte, rk []byte, r int) {
+func clefiGfn4(y []byte, x []byte, rk []byte, r int) {
 	var fin, fout [16]byte
 
-	ByteCpy(fin[:], x, 16)
+	byteCpy(fin[:], x, 16)
 	for ; r > 0; r-- {
-		ClefiaF0Xor(fout[0:], fin[0:], rk[0:])
-		ClefiaF1Xor(fout[8:], fin[8:], rk[4:])
+		clefiaF0Xor(fout[0:], fin[0:], rk[0:])
+		clefiaF1Xor(fout[8:], fin[8:], rk[4:])
 		rk = rk[8:]
 		if r != 0 { /* swapping for encryption */
-			ByteCpy(fin[0:], fout[4:], 12)
-			ByteCpy(fin[12:], fout[0:], 4)
+			byteCpy(fin[0:], fout[4:], 12)
+			byteCpy(fin[12:], fout[0:], 4)
 		}
 	}
-	ByteCpy(y, fout[:], 16)
+	byteCpy(y, fout[:], 16)
 }
 
-func ClefiaGfn8(y []byte, x []byte, rk []byte, r int) {
+func clefiGfn8(y []byte, x []byte, rk []byte, r int) {
 	var fin, fout [32]byte
 
-	ByteCpy(fin[:], x, 32)
+	byteCpy(fin[:], x, 32)
 	for ; r > 0; r-- {
-		ClefiaF0Xor(fout[0:], fin[0:], rk[0:])
-		ClefiaF1Xor(fout[8:], fin[8:], rk[4:])
-		ClefiaF0Xor(fout[16:], fin[16:], rk[8:])
-		ClefiaF1Xor(fout[24:], fin[24:], rk[12:])
+		clefiaF0Xor(fout[0:], fin[0:], rk[0:])
+		clefiaF1Xor(fout[8:], fin[8:], rk[4:])
+		clefiaF0Xor(fout[16:], fin[16:], rk[8:])
+		clefiaF1Xor(fout[24:], fin[24:], rk[12:])
 		rk = rk[16:]
 		if r != 0 { /* swapping for encryption */
-			ByteCpy(fin[0:], fout[4:], 28)
-			ByteCpy(fin[28:], fout[0:], 4)
+			byteCpy(fin[0:], fout[4:], 28)
+			byteCpy(fin[28:], fout[0:], 4)
 		}
 	}
-	ByteCpy(y, fout[:], 32)
+	byteCpy(y, fout[:], 32)
 }
 
-func ClefiaGfn4Inv(y []byte, x []byte, rk []byte, r int) {
+func clefiGfn4Inv(y []byte, x []byte, rk []byte, r int) {
 	var fin, fout [16]byte
 
 	r--
-	ByteCpy(fin[:], x, 16)
+	byteCpy(fin[:], x, 16)
 	for ; r >= 0; r-- {
 		rktmp := rk[r*8:]
-		ClefiaF0Xor(fout[0:], fin[0:], rktmp[0:])
-		ClefiaF1Xor(fout[8:], fin[8:], rktmp[4:])
+		clefiaF0Xor(fout[0:], fin[0:], rktmp[0:])
+		clefiaF1Xor(fout[8:], fin[8:], rktmp[4:])
 		if r != 0 { /* swapping for decryption */
-			ByteCpy(fin[0:], fout[12:], 4)
-			ByteCpy(fin[4:], fout[0:], 12)
+			byteCpy(fin[0:], fout[12:], 4)
+			byteCpy(fin[4:], fout[0:], 12)
 		}
 	}
-	ByteCpy(y, fout[:], 16)
+	byteCpy(y, fout[:], 16)
 }
 
-func ClefiaDoubleSwap(lk []byte) {
+func clefiaDoubleSwap(lk []byte) {
 	var t [16]byte
 
 	t[0] = (lk[0] << 7) | (lk[1] >> 1)
@@ -224,14 +224,14 @@ func ClefiaDoubleSwap(lk []byte) {
 	t[14] = (lk[14] >> 7) | (lk[13] << 1)
 	t[15] = (lk[15] >> 7) | (lk[14] << 1)
 
-	ByteCpy(lk, t[:], 16)
+	byteCpy(lk, t[:], 16)
 }
 
-func ClefiaConSet(con []byte, iv []byte, lk int) {
+func clefiaConSet(con []byte, iv []byte, lk int) {
 	var t [2]byte
 	var tmp byte
 
-	ByteCpy(t[:], iv, 2)
+	byteCpy(t[:], iv, 2)
 	for ; lk > 0; lk-- {
 		con[0] = t[0] ^ 0xb7 /* P_16 = 0xb7e1 (natural logarithm) */
 		con[1] = t[1] ^ 0xe1
@@ -254,7 +254,7 @@ func ClefiaConSet(con []byte, iv []byte, lk int) {
 	}
 }
 
-func ClefiaKeySet128(rk []byte, skey []byte) {
+func clefiaKeySet128(rk []byte, skey []byte) {
 
 	iv := []byte{0x42, 0x8a} /* cubic root of 2 */
 
@@ -262,136 +262,136 @@ func ClefiaKeySet128(rk []byte, skey []byte) {
 	var con128 [4 * 60]byte
 
 	/* generating CONi^(128) (0 <= i < 60, lk = 30) */
-	ClefiaConSet(con128[:], iv, 30)
+	clefiaConSet(con128[:], iv, 30)
 	/* GFN_{4,12} (generating L from K) */
-	ClefiaGfn4(lk[:], skey, con128[:], 12)
+	clefiGfn4(lk[:], skey, con128[:], 12)
 
-	ByteCpy(rk, skey, 8) /* initial whitening key (WK0, WK1) */
+	byteCpy(rk, skey, 8) /* initial whitening key (WK0, WK1) */
 	rk = rk[8:]
 	for i := 0; i < 9; i++ { /* round key (RKi (0 <= i < 36)) */
-		ByteXor(rk, lk[:], con128[i*16+(4*24):], 16)
+		byteXor(rk, lk[:], con128[i*16+(4*24):], 16)
 		if i%2 != 0 {
-			ByteXor(rk, rk, skey, 16) /* Xoring K */
+			byteXor(rk, rk, skey, 16) /* Xoring K */
 		}
-		ClefiaDoubleSwap(lk[:]) /* Updating L (DoubleSwap function) */
+		clefiaDoubleSwap(lk[:]) /* Updating L (DoubleSwap function) */
 		rk = rk[16:]
 	}
-	ByteCpy(rk, skey[8:], 8) /* final whitening key (WK2, WK3) */
+	byteCpy(rk, skey[8:], 8) /* final whitening key (WK2, WK3) */
 }
 
-func ClefiaKeySet192(rk []byte, skey []byte) {
+func clefiaKeySet192(rk []byte, skey []byte) {
 
 	iv := []byte{0x71, 0x37} /* cubic root of 3 */
 	var skey256 [32]byte
 	var lk [32]byte
 	var con192 [4 * 84]byte
 
-	ByteCpy(skey256[:], skey, 24)
+	byteCpy(skey256[:], skey, 24)
 	for i := 0; i < 8; i++ {
 		skey256[i+24] = ^skey[i]
 	}
 
 	/* generating CONi^(192) (0 <= i < 84, lk = 42) */
-	ClefiaConSet(con192[:], iv, 42)
+	clefiaConSet(con192[:], iv, 42)
 	/* GFN_{8,10} (generating L from K) */
-	ClefiaGfn8(lk[:], skey256[:], con192[:], 10)
+	clefiGfn8(lk[:], skey256[:], con192[:], 10)
 
-	ByteXor(rk, skey256[:], skey256[16:], 8) /* initial whitening key (WK0, WK1) */
+	byteXor(rk, skey256[:], skey256[16:], 8) /* initial whitening key (WK0, WK1) */
 	rk = rk[8:]
 	for i := 0; i < 11; i++ { /* round key (RKi (0 <= i < 44)) */
 		if ((i / 2) % 2) != 0 {
-			ByteXor(rk, lk[16:], con192[i*16+(4*40):], 16) /* LR */
+			byteXor(rk, lk[16:], con192[i*16+(4*40):], 16) /* LR */
 			if i%2 != 0 {
-				ByteXor(rk, rk, skey256[0:], 16) /* Xoring KL */
+				byteXor(rk, rk, skey256[0:], 16) /* Xoring KL */
 			}
-			ClefiaDoubleSwap(lk[16:]) /* updating LR */
+			clefiaDoubleSwap(lk[16:]) /* updating LR */
 		} else {
-			ByteXor(rk, lk[0:], con192[i*16+(4*40):], 16) /* LL */
+			byteXor(rk, lk[0:], con192[i*16+(4*40):], 16) /* LL */
 			if i%2 != 0 {
-				ByteXor(rk, rk, skey256[16:], 16) /* Xoring KR */
+				byteXor(rk, rk, skey256[16:], 16) /* Xoring KR */
 			}
-			ClefiaDoubleSwap(lk[0:]) /* updating LL */
+			clefiaDoubleSwap(lk[0:]) /* updating LL */
 		}
 		rk = rk[16:]
 	}
-	ByteXor(rk, skey256[8:], skey256[24:], 8) /* final whitening key (WK2, WK3) */
+	byteXor(rk, skey256[8:], skey256[24:], 8) /* final whitening key (WK2, WK3) */
 }
 
-func ClefiaKeySet256(rk []byte, skey []byte) {
+func clefiaKeySet256(rk []byte, skey []byte) {
 	iv := []byte{0xb5, 0xc0} /* cubic root of 5 */
 
 	var lk [32]byte
 	var con256 [4 * 92]byte
 
 	/* generating CONi^(256) (0 <= i < 92, lk = 46) */
-	ClefiaConSet(con256[:], iv, 46)
+	clefiaConSet(con256[:], iv, 46)
 	/* GFN_{8,10} (generating L from K) */
-	ClefiaGfn8(lk[:], skey, con256[:], 10)
+	clefiGfn8(lk[:], skey, con256[:], 10)
 
-	ByteXor(rk, skey, skey[16:], 8) /* initial whitening key (WK0, WK1) */
+	byteXor(rk, skey, skey[16:], 8) /* initial whitening key (WK0, WK1) */
 	rk = rk[8:]
 	for i := 0; i < 13; i++ { /* round key (RKi (0 <= i < 52)) */
 		if ((i / 2) % 2) != 0 {
-			ByteXor(rk, lk[16:], con256[i*16+(4*40):], 16) /* LR */
+			byteXor(rk, lk[16:], con256[i*16+(4*40):], 16) /* LR */
 			if i%2 != 0 {
-				ByteXor(rk, rk, skey[0:], 16) /* Xoring KL */
+				byteXor(rk, rk, skey[0:], 16) /* Xoring KL */
 			}
-			ClefiaDoubleSwap(lk[16:]) /* updating LR */
+			clefiaDoubleSwap(lk[16:]) /* updating LR */
 		} else {
-			ByteXor(rk, lk[:], con256[i*16+(4*40):], 16) /* LL */
+			byteXor(rk, lk[:], con256[i*16+(4*40):], 16) /* LL */
 			if i%2 != 0 {
-				ByteXor(rk, rk, skey[16:], 16) /* Xoring KR */
+				byteXor(rk, rk, skey[16:], 16) /* Xoring KR */
 			}
-			ClefiaDoubleSwap(lk[:]) /* updating LL */
+			clefiaDoubleSwap(lk[:]) /* updating LL */
 		}
 		rk = rk[16:]
 	}
-	ByteXor(rk, skey[8:], skey[24:], 8) /* final whitening key (WK2, WK3) */
+	byteXor(rk, skey[8:], skey[24:], 8) /* final whitening key (WK2, WK3) */
 }
 
-func ClefiaKeySet(rk []byte, skey []byte, key_bitlen int) int {
+func clefiaKeySet(rk []byte, skey []byte, key_bitlen int) int {
 	if 128 == key_bitlen {
-		ClefiaKeySet128(rk, skey)
+		clefiaKeySet128(rk, skey)
 		return 18
 	} else if 192 == key_bitlen {
-		ClefiaKeySet192(rk, skey)
+		clefiaKeySet192(rk, skey)
 		return 22
 	} else if 256 == key_bitlen {
-		ClefiaKeySet256(rk, skey)
+		clefiaKeySet256(rk, skey)
 		return 26
 	}
 
 	return 0 /* invalid key_bitlen */
 }
 
-func ClefiaEncrypt(ct []byte, pt []byte, rk []byte, r int) {
+func clefiaEncrypt(ct []byte, pt []byte, rk []byte, r int) {
 
 	var rin, rout [16]byte
 
-	ByteCpy(rin[:], pt, 16)
+	byteCpy(rin[:], pt, 16)
 
-	ByteXor(rin[4:], rin[4:], rk[0:], 4) /* initial key whitening */
-	ByteXor(rin[12:], rin[12:], rk[4:], 4)
+	byteXor(rin[4:], rin[4:], rk[0:], 4) /* initial key whitening */
+	byteXor(rin[12:], rin[12:], rk[4:], 4)
 
-	ClefiaGfn4(rout[:], rin[:], rk[8:], r) /* GFN_{4,r} */
+	clefiGfn4(rout[:], rin[:], rk[8:], r) /* GFN_{4,r} */
 
-	ByteCpy(ct, rout[:], 16)
-	ByteXor(ct[4:], ct[4:], rk[8+r*8+0:], 4) /* final key whitening */
-	ByteXor(ct[12:], ct[12:], rk[8+r*8+4:], 4)
+	byteCpy(ct, rout[:], 16)
+	byteXor(ct[4:], ct[4:], rk[8+r*8+0:], 4) /* final key whitening */
+	byteXor(ct[12:], ct[12:], rk[8+r*8+4:], 4)
 }
 
-func ClefiaDecrypt(pt []byte, ct []byte, rk []byte, r int) {
+func clefiaDecrypt(pt []byte, ct []byte, rk []byte, r int) {
 
 	var rin, rout [16]byte
 
-	ByteCpy(rin[:], ct, 16)
+	byteCpy(rin[:], ct, 16)
 
-	ByteXor(rin[4:], rin[4:], rk[r*8+8:], 4) /* initial key whitening */
-	ByteXor(rin[12:], rin[12:], rk[r*8+12:], 4)
+	byteXor(rin[4:], rin[4:], rk[r*8+8:], 4) /* initial key whitening */
+	byteXor(rin[12:], rin[12:], rk[r*8+12:], 4)
 
-	ClefiaGfn4Inv(rout[:], rin[:], rk[8:], r) /* GFN^{-1}_{4,r} */
+	clefiGfn4Inv(rout[:], rin[:], rk[8:], r) /* GFN^{-1}_{4,r} */
 
-	ByteCpy(pt, rout[:], 16)
-	ByteXor(pt[4:], pt[4:], rk, 4) /* final key whitening */
-	ByteXor(pt[12:], pt[12:], rk[4:], 4)
+	byteCpy(pt, rout[:], 16)
+	byteXor(pt[4:], pt[4:], rk, 4) /* final key whitening */
+	byteXor(pt[12:], pt[12:], rk[4:], 4)
 }
