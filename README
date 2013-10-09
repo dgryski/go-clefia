@@ -1,0 +1,3 @@
+An implementation of Sony's CLEFIA lightweight cipher in Go.
+
+For package documentation, please see http://godoc.org/github.com/dgryski/go-clefia
