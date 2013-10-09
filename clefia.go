@@ -1,12 +1,12 @@
 package clefia
 
+import (
+	"crypto/cipher"
+	"strconv"
+)
+
 // translation of Clefia.cpp from http://embeddedsw.net/libObfuscate_Cryptography_Home.html
 // License: LGPL
-
-type clefiaCipher struct {
-	r  int // rounds
-	rk [8*26 + 16]byte
-}
 
 /* S0 (8-bit S-box based on four 4-bit S-boxes) */
 var clefia_s0 = [256]byte{
@@ -349,49 +349,74 @@ func clefiaKeySet256(rk []byte, skey []byte) {
 	byteXor(rk, skey[8:], skey[24:], 8) /* final whitening key (WK2, WK3) */
 }
 
-func clefiaKeySet(rk []byte, skey []byte, key_bitlen int) int {
-	if 128 == key_bitlen {
-		clefiaKeySet128(rk, skey)
-		return 18
-	} else if 192 == key_bitlen {
-		clefiaKeySet192(rk, skey)
-		return 22
-	} else if 256 == key_bitlen {
-		clefiaKeySet256(rk, skey)
-		return 26
-	}
-
-	return 0 /* invalid key_bitlen */
+// A cipher is an instance of CLEFIA encryption using a particular key
+type clefiaCipher struct {
+	r  int // rounds
+	rk [8*26 + 16]byte
 }
 
-func clefiaEncrypt(ct []byte, pt []byte, rk []byte, r int) {
+type KeySizeError int
+
+func (k KeySizeError) Error() string { return "clefia: invalid key size " + strconv.Itoa(int(k)) }
+
+// New returns a cipher.Block implementing Sony's CLEFIA cipher. The key argument should be 16, 24, or 32 bytes.
+func New(key []byte) (cipher.Block, error) {
+	var cl clefiaCipher
+
+	l := len(key)
+
+	switch l * 8 {
+
+	case 128:
+		clefiaKeySet128(cl.rk[:], key)
+		cl.r = 18
+	case 192:
+		clefiaKeySet192(cl.rk[:], key)
+		cl.r = 22
+	case 256:
+		clefiaKeySet256(cl.rk[:], key)
+		cl.r = 26
+	default:
+		return nil, KeySizeError(l)
+	}
+
+	return &cl, nil
+}
+
+const BlockSize = 16
+
+func (cl *clefiaCipher) BlockSize() int { return BlockSize }
+
+func (cl *clefiaCipher) Encrypt(ct []byte, pt []byte) {
 
 	var rin, rout [16]byte
 
 	byteCpy(rin[:], pt, 16)
 
-	byteXor(rin[4:], rin[4:], rk[0:], 4) /* initial key whitening */
-	byteXor(rin[12:], rin[12:], rk[4:], 4)
+	byteXor(rin[4:], rin[4:], cl.rk[0:], 4) /* initial key whitening */
+	byteXor(rin[12:], rin[12:], cl.rk[4:], 4)
 
-	clefiGfn4(rout[:], rin[:], rk[8:], r) /* GFN_{4,r} */
+	clefiGfn4(rout[:], rin[:], cl.rk[8:], cl.r) /* GFN_{4,r} */
 
 	byteCpy(ct, rout[:], 16)
-	byteXor(ct[4:], ct[4:], rk[8+r*8+0:], 4) /* final key whitening */
-	byteXor(ct[12:], ct[12:], rk[8+r*8+4:], 4)
+	byteXor(ct[4:], ct[4:], cl.rk[8+cl.r*8+0:], 4) /* final key whitening */
+	byteXor(ct[12:], ct[12:], cl.rk[8+cl.r*8+4:], 4)
 }
 
-func clefiaDecrypt(pt []byte, ct []byte, rk []byte, r int) {
+func (cl *clefiaCipher) Decrypt(pt []byte, ct []byte) {
 
 	var rin, rout [16]byte
 
 	byteCpy(rin[:], ct, 16)
 
-	byteXor(rin[4:], rin[4:], rk[r*8+8:], 4) /* initial key whitening */
-	byteXor(rin[12:], rin[12:], rk[r*8+12:], 4)
+	byteXor(rin[4:], rin[4:], cl.rk[cl.r*8+8:], 4) /* initial key whitening */
+	byteXor(rin[12:], rin[12:], cl.rk[cl.r*8+12:], 4)
 
-	clefiGfn4Inv(rout[:], rin[:], rk[8:], r) /* GFN^{-1}_{4,r} */
+	clefiGfn4Inv(rout[:], rin[:], cl.rk[8:], cl.r) /* GFN^{-1}_{4,r} */
 
 	byteCpy(pt, rout[:], 16)
-	byteXor(pt[4:], pt[4:], rk, 4) /* final key whitening */
-	byteXor(pt[12:], pt[12:], rk[4:], 4)
+	byteXor(pt[4:], pt[4:], cl.rk[:], 4) /* final key whitening */
+	byteXor(pt[12:], pt[12:], cl.rk[4:], 4)
 }
+
+var _ = cipher.Block(&clefiaCipher{})
