@@ -1,12 +1,17 @@
+/*
+Package clefia implements Sony's CLEFIA lightweight cipher
+
+For more information on CLEFIA, please see http://www.sony.net/Products/cryptography/clefia/
+
+This implementation is a translation of the reference C code from http://embeddedsw.net/libObfuscate_Cryptography_Home.html .
+The original code, and thus this implementation, are licensed under the LGPL.
+*/
 package clefia
 
 import (
 	"crypto/cipher"
 	"strconv"
 )
-
-// translation of Clefia.cpp from http://embeddedsw.net/libObfuscate_Cryptography_Home.html
-// License: LGPL
 
 /* S0 (8-bit S-box based on four 4-bit S-boxes) */
 var clefia_s0 = [256]byte{
